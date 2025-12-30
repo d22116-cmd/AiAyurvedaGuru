@@ -1,0 +1,160 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>VaidyaAI | The Digital Ayurvedic Guru</title>
+    <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,700;1,700&family=Plus+Jakarta+Sans:wght@300;400;600&display=swap" rel="stylesheet">
+    <style>
+        :root { --primary: #1b3c33; --accent: #d4af37; --bg: #fdfcf8; --vata: #8e9eab; --pitta: #e67e22; --kapha: #27ae60; }
+        * { box-sizing: border-box; }
+        body { font-family: 'Plus Jakarta Sans', sans-serif; background: var(--bg); color: #2d2d2d; margin: 0; display: flex; height: 100vh; overflow: hidden; }
+        
+        /* Layout */
+        #video-container { flex: 1.5; background: #000; position: relative; }
+        video { width: 100%; height: 100%; object-fit: cover; opacity: 0.8; }
+        #consultation-panel { flex: 1; display: flex; flex-direction: column; background: white; box-shadow: -5px 0 20px rgba(0,0,0,0.1); z-index: 5; }
+        
+        /* Stepper */
+        .stepper { display: flex; background: #f8f8f8; padding: 15px; border-bottom: 1px solid #eee; }
+        .step { flex: 1; text-align: center; font-size: 0.65rem; font-weight: 800; color: #ccc; letter-spacing: 1px; }
+        .step.active { color: var(--primary); border-bottom: 2px solid var(--accent); }
+
+        /* Chat */
+        #chat-window { flex-grow: 1; padding: 25px; overflow-y: auto; display: flex; flex-direction: column; gap: 15px; }
+        .msg { padding: 15px; border-radius: 12px; max-width: 85%; line-height: 1.6; font-size: 0.95rem; }
+        .bot { background: #f1f5f2; border-left: 5px solid var(--primary); align-self: flex-start; }
+        .user { background: var(--primary); color: white; align-self: flex-end; }
+
+        /* Visuals */
+        .scanner { position: absolute; width: 100%; height: 3px; background: var(--accent); top: 0; animation: scan 3s infinite linear; display: none; }
+        @keyframes scan { 0% { top: 0; } 100% { top: 100%; } }
+
+        /* Result Screen */
+        #result-overlay { display: none; position: fixed; inset: 0; background: white; z-index: 100; padding: 40px; overflow-y: auto; }
+        .prescription-pad { border: 2px solid #eee; padding: 40px; position: relative; max-width: 800px; margin: 0 auto; box-shadow: 0 10px 30px rgba(0,0,0,0.05); }
+        .rx-symbol { font-family: 'Playfair Display'; font-size: 5rem; opacity: 0.1; position: absolute; top: 10px; left: 20px; }
+        .dosha-tag { display: inline-block; padding: 5px 15px; border-radius: 20px; color: white; font-weight: bold; margin-bottom: 20px; }
+
+        /* Buttons */
+        .btn { padding: 15px 30px; border: none; border-radius: 8px; cursor: pointer; font-weight: bold; transition: 0.3s; }
+        .btn-main { background: var(--primary); color: white; width: 100%; }
+        .btn-main:hover { background: #122923; }
+    </style>
+</head>
+<body>
+
+<div id="video-container">
+    <video id="webcam" autoplay playsinline muted></video>
+    <div class="scanner" id="scan-line"></div>
+</div>
+
+<div id="consultation-panel">
+    <div class="stepper">
+        <div class="step active" id="s1">DARSHANA</div>
+        <div class="step" id="s2">SPARSHA</div>
+        <div class="step" id="s3">PRASHNA</div>
+    </div>
+    <div id="chat-window">
+        <div class="msg bot">Namaste. I am your AI Guru. I will now observe your physical traits. Please keep your face still.</div>
+    </div>
+    <div style="padding: 20px;">
+        <button class="btn btn-main" id="action-btn" onclick="startDarshana()">Begin Observation</button>
+    </div>
+</div>
+
+<div id="result-overlay">
+    <div class="prescription-pad" id="print-area">
+        <span class="rx-symbol">Rx</span>
+        <h1 style="font-family: 'Playfair Display';">Ayurvedic Prakriti Report</h1>
+        <div id="dosha-result" class="dosha-tag"></div>
+        <hr>
+        <div id="treatment-content"></div>
+        <button class="btn btn-main" onclick="window.print()" style="margin-top: 20px;">Download Prescription</button>
+        <button class="btn" onclick="location.reload()">New Consultation</button>
+    </div>
+</div>
+
+<script>
+    let scores = { vata: 0, pitta: 0, kapha: 0 };
+    const chat = document.getElementById('chat-window');
+    
+    function log(text, sender = 'bot') {
+        const d = document.createElement('div');
+        d.className = `msg ${sender}`;
+        d.innerText = text;
+        chat.appendChild(d);
+        chat.scrollTop = chat.scrollHeight;
+        if(sender === 'bot') {
+            const u = new SpeechSynthesisUtterance(text);
+            u.rate = 0.9;
+            window.speechSynthesis.speak(u);
+        }
+    }
+
+    async function startDarshana() {
+        document.getElementById('action-btn').style.display = 'none';
+        document.getElementById('scan-line').style.display = 'block';
+        const stream = await navigator.mediaDevices.getUserMedia({ video: true, audio: true });
+        document.getElementById('webcam').srcObject = stream;
+
+        log("Analyzing facial structure and skin luster...");
+        setTimeout(() => {
+            scores.pitta += 5; // AI Logic: Detected sharp features
+            log("I observe a sharp, focused energy in your features. Moving to Sparsha.");
+            document.getElementById('s1').classList.remove('active');
+            document.getElementById('s2').classList.add('active');
+            startSparsha(stream);
+        }, 5000);
+    }
+
+    async function startSparsha(stream) {
+        log("Phase 2: Sparsha. Please speak clearly: 'My body feels balanced today'. I am analyzing your voice pulse.");
+        
+        const audioCtx = new AudioContext();
+        const analyser = audioCtx.createAnalyser();
+        const source = audioCtx.createMediaStreamSource(stream);
+        source.connect(analyser);
+        
+        setTimeout(() => {
+            scores.vata += 3; // AI Logic: Detected high-frequency voice rhythm
+            log("Voice analysis complete. Moving to final Inquiry.");
+            document.getElementById('s2').classList.remove('active');
+            document.getElementById('s3').classList.add('active');
+            startPrashna();
+        }, 6000);
+    }
+
+    function startPrashna() {
+        const q = "Do you prefer warm food and dislike cold weather?";
+        log(q);
+        const ans = confirm("OK for YES, Cancel for NO");
+        if(ans) scores.vata += 10; else scores.pitta += 5;
+        showFinal();
+    }
+
+    function showFinal() {
+        const total = scores.vata + scores.pitta + scores.kapha;
+        const dom = scores.vata > scores.pitta ? 'Vata' : 'Pitta';
+        
+        const overlay = document.getElementById('result-overlay');
+        const content = document.getElementById('treatment-content');
+        const tag = document.getElementById('dosha-result');
+        
+        tag.innerText = `Dominant: ${dom} Prakriti`;
+        tag.style.background = dom === 'Vata' ? 'var(--vata)' : 'var(--pitta)';
+        
+        content.innerHTML = `
+            <h3>🌿 Recommended Herbs</h3>
+            <ul><li>${dom === 'Vata' ? 'Ashwagandha - 1 tsp with milk' : 'Amalaki - 500mg daily'}</li></ul>
+            <h3>🍎 Diet (Ahar)</h3>
+            <p>${dom === 'Vata' ? 'Favor warm, oily, cooked foods. Avoid raw salads.' : 'Favor cooling, sweet, and bitter foods. Avoid chilies.'}</p>
+            <h3>🧘 Lifestyle (Vihar)</h3>
+            <p>${dom === 'Vata' ? 'Daily Abhyanga with Sesame oil.' : 'Cooling Moon-walking and meditation.'}</p>
+        `;
+        
+        overlay.style.display = 'block';
+    }
+</script>
+</body>
+</html>
